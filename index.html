@@ -3,21 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shoot 'Em Up Game</title>
+    <title>Space Shooter Game</title>
     <style>
-        body {
+        body, html {
             margin: 0;
+            padding: 0;
+            height: 100%;
             overflow: hidden;
             background-color: #000;
+            font-family: 'Press Start 2P', cursive;
         }
-        canvas {
+        #gameCanvas {
             display: block;
+            margin: 0 auto;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 20px;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 40px;
+            text-align: center;
+            display: none;
         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div id="score">Score: <span id="scoreValue">0</span></div>
+    <div id="gameOver">
+        Game Over<br>
+        <span id="finalScore"></span><br>
+        Press Space to Restart
+    </div>
 
-    <script src="script.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const playerSprite = new Image();
+        playerSprite.src = 'https://media.discordapp.net/attachments/1249904363590254696/1269054707654066288/yct20hubfk061.webp?ex=66c3c2cc&is=66c2714c&hm=e2e29e0f99747cd11b9c51c462c85abfa467e1ecf2cc6aa821ccb24dba08ca79&=&format=webp&width=409&height=409'; // Replace with spaceship asset URL
+
+        const enemySprite = new Image();
+        enemySprite.src = 'https://media.discordapp.net/attachments/1249904363590254696/1269446197400043530/8fabf2eb407b715315a49f4c67ac4908.png?ex=66c3dde6&is=66c28c66&hm=c0474789ec7a44851baa4377805c3a79ab0c138a4f843d96bf05195bd5871953&=&format=webp&quality=lossless&width=571&height=571'; // Replace with enemy asset URL
+
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 100,
+            width: 50,
+            height: 50,
+            speed: 5,
+            health: 100
+        };
+
+        let bullets = [];
+        let enemies = [];
+        let score = 0;
+        let gameActive = true;
+
+        function drawPlayer() {
+            ctx.drawImage(playerSprite, player.x, player.y, player.width, player.height);
+        }
+
+        function drawBullets() {
+            bullets.forEach(bullet => {
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(bullet.x, bullet.y, 5, 15);
+            });
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.drawImage(enemySprite, enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+        }
+
+        function updateBullets() {
+            bullets = bullets.filter(bullet => bullet.y > 0);
+            bullets.forEach(bullet => bullet.y -= 10);
+        }
+
+        function updateEnemies() {
+            enemies = enemies.filter(enemy => enemy.y < canvas.height);
+            enemies.forEach(enemy => {
+                enemy.y += 2;
+            });
+        }
+
+        function checkCollisions() {
+            bullets.forEach((bullet, bulletIndex) => {
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (
+                        bullet.x < enemy.x + enemy.width &&
+                        bullet.x + 5 > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + 15 > enemy.y
+                    ) {
+                        bullets.splice(bulletIndex, 1);
+                        enemies.splice(enemyIndex, 1);
+                        score += 10;
+                        document.getElementById('scoreValue').textContent = score;
+                    }
+                });
+            });
+
+            enemies.forEach(enemy => {
+                if (
+                    player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y
+                ) {
+                    player.health -= 10;
+                    if (player.health <= 0) {
+                        gameOver();
+                    }
+                }
+            });
+        }
+
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('gameOver').style.display = 'block';
+            document.getElementById('finalScore').textContent = `Final Score: ${score}`;
+        }
+
+        function shoot() {
+            bullets.push({ x: player.x + player.width / 2 - 2.5, y: player.y });
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (gameActive) {
+                drawPlayer();
+                drawBullets();
+                drawEnemies();
+                updateBullets();
+                updateEnemies();
+                checkCollisions();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                player.x -= player.speed;
+            }
+            if (e.key === 'ArrowRight') {
+                player.x += player.speed;
+            }
+            if (e.key === ' ') {
+                shoot();
+            }
+            if (!gameActive && e.key === ' ') {
+                gameActive = true;
+                score = 0;
+                document.getElementById('scoreValue').textContent = score;
+                document.getElementById('gameOver').style.display = 'none';
+                bullets = [];
+                enemies = [];
+                player.health = 100;
+                gameLoop();
+            }
+        });
+
+        setInterval(() => {
+            if (gameActive) {
+                enemies.push({
+                    x: Math.random() * canvas.width,
+                    y: 0,
+                    width: 50,
+                    height: 50
+                });
+            }
+        }, 1000);
+
+        gameLoop();
+    </script>
 </body>
 </html>
+
